@@ -22,6 +22,7 @@ import org.apache.dubbo.reactive.handler.ManyToManyMethodHandler;
 import org.apache.dubbo.rpc.protocol.tri.observer.ServerCallToObserverAdapter;
 
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -37,19 +38,17 @@ import static org.mockito.Mockito.doAnswer;
  * Unit test for ManyToManyMethodHandler
  */
 public final class ManyToManyMethodHandlerTest {
-
     @Test
     void testInvoke() throws ExecutionException, InterruptedException {
-        AtomicInteger nextCounter = new AtomicInteger();
-        AtomicInteger completeCounter = new AtomicInteger();
-        AtomicInteger errorCounter = new AtomicInteger();
-        ServerCallToObserverAdapter<String> responseObserver = Mockito.mock(ServerCallToObserverAdapter.class);
-        doAnswer(o -> nextCounter.incrementAndGet())
-            .when(responseObserver).onNext(anyString());
-        doAnswer(o -> completeCounter.incrementAndGet())
-            .when(responseObserver).onCompleted();
-        doAnswer(o -> errorCounter.incrementAndGet())
-            .when(responseObserver).onError(any(Throwable.class));
+
+        creatObserverAdapter creator=new creatObserverAdapter();
+
+        ServerCallToObserverAdapter<String> responseObserver=creator.getResponseObserver();
+
+        AtomicInteger nextCounter = creator.getNextCounter();
+        AtomicInteger completeCounter = creator.getCompleteCounter();
+        AtomicInteger errorCounter = creator.getErrorCounter();
+
         ManyToManyMethodHandler<String, String> handler = new ManyToManyMethodHandler<>(requestFlux ->
             requestFlux.map(r -> r + "0"));
         CompletableFuture<StreamObserver<String>> future = handler.invoke(new Object[]{responseObserver});

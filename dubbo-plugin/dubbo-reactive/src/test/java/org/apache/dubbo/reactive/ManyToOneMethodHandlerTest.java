@@ -22,6 +22,7 @@ import org.apache.dubbo.reactive.handler.ManyToOneMethodHandler;
 import org.apache.dubbo.rpc.protocol.tri.observer.ServerCallToObserverAdapter;
 
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -38,22 +39,26 @@ import static org.mockito.Mockito.doAnswer;
  */
 public final class ManyToOneMethodHandlerTest {
 
-    @Test
-    void testInvoker() throws ExecutionException, InterruptedException {
-        AtomicInteger nextCounter = new AtomicInteger();
-        AtomicInteger completeCounter = new AtomicInteger();
-        AtomicInteger errorCounter = new AtomicInteger();
-        ServerCallToObserverAdapter<String> responseObserver = Mockito.mock(ServerCallToObserverAdapter.class);
-        doAnswer(o -> nextCounter.incrementAndGet())
-            .when(responseObserver).onNext(anyString());
-        doAnswer(o -> completeCounter.incrementAndGet())
-            .when(responseObserver).onCompleted();
-        doAnswer(o -> errorCounter.incrementAndGet())
-            .when(responseObserver).onError(any(Throwable.class));
+    private StreamObserver<String> requestObserver;
+    private AtomicInteger nextCounter;
+    private AtomicInteger completeCounter;
+    private AtomicInteger errorCounter;
+    @BeforeEach
+    void init() throws ExecutionException, InterruptedException {
+        creatObserverAdapter creator=new creatObserverAdapter();
+        ServerCallToObserverAdapter<String> responseObserver=creator.getResponseObserver();
+        nextCounter = creator.getNextCounter();
+        completeCounter = creator.getCompleteCounter();
+        errorCounter = creator.getErrorCounter();
+
         ManyToOneMethodHandler<String, String> handler = new ManyToOneMethodHandler<>(requestFlux ->
             requestFlux.map(Integer::valueOf).reduce(Integer::sum).map(String::valueOf));
         CompletableFuture<StreamObserver<String>> future = handler.invoke(new Object[]{responseObserver});
-        StreamObserver<String> requestObserver = future.get();
+        requestObserver = future.get();
+    }
+
+    @Test
+    void testInvoker(){
         for (int i = 0; i < 10; i++) {
             requestObserver.onNext(String.valueOf(i));
         }
@@ -64,21 +69,7 @@ public final class ManyToOneMethodHandlerTest {
     }
 
     @Test
-    void testError() throws ExecutionException, InterruptedException {
-        AtomicInteger nextCounter = new AtomicInteger();
-        AtomicInteger completeCounter = new AtomicInteger();
-        AtomicInteger errorCounter = new AtomicInteger();
-        ServerCallToObserverAdapter<String> responseObserver = Mockito.mock(ServerCallToObserverAdapter.class);
-        doAnswer(o -> nextCounter.incrementAndGet())
-            .when(responseObserver).onNext(anyString());
-        doAnswer(o -> completeCounter.incrementAndGet())
-            .when(responseObserver).onCompleted();
-        doAnswer(o -> errorCounter.incrementAndGet())
-            .when(responseObserver).onError(any(Throwable.class));
-        ManyToOneMethodHandler<String, String> handler = new ManyToOneMethodHandler<>(requestFlux ->
-            requestFlux.map(Integer::valueOf).reduce(Integer::sum).map(String::valueOf));
-        CompletableFuture<StreamObserver<String>> future = handler.invoke(new Object[]{responseObserver});
-        StreamObserver<String> requestObserver = future.get();
+    void testError(){
         for (int i = 0; i < 10; i++) {
             if (i == 6) {
                 requestObserver.onError(new Throwable());

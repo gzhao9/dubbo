@@ -17,15 +17,18 @@
 
 package org.apache.dubbo.reactive;
 
+import org.apache.dubbo.common.stream.StreamObserver;
 import org.apache.dubbo.reactive.handler.OneToManyMethodHandler;
 import org.apache.dubbo.rpc.protocol.tri.observer.ServerCallToObserverAdapter;
 
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import reactor.core.publisher.Flux;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -37,19 +40,22 @@ import static org.mockito.Mockito.doAnswer;
  */
 public final class OneToManyMethodHandlerTest {
 
+
+    private ServerCallToObserverAdapter<String> responseObserver;
+    private AtomicInteger nextCounter;
+    private AtomicInteger completeCounter;
+    private AtomicInteger errorCounter;
+    @BeforeEach
+    void init(){
+        creatObserverAdapter creator=new creatObserverAdapter();
+        responseObserver=creator.getResponseObserver();
+        nextCounter = creator.getNextCounter();
+        completeCounter = creator.getCompleteCounter();
+        errorCounter = creator.getErrorCounter();
+    }
     @Test
     void testInvoke() {
         String request = "1,2,3,4,5,6,7";
-        AtomicInteger nextCounter = new AtomicInteger();
-        AtomicInteger completeCounter = new AtomicInteger();
-        AtomicInteger errorCounter = new AtomicInteger();
-        ServerCallToObserverAdapter<String> responseObserver = Mockito.mock(ServerCallToObserverAdapter.class);
-        doAnswer(o -> nextCounter.incrementAndGet())
-            .when(responseObserver).onNext(anyString());
-        doAnswer(o -> completeCounter.incrementAndGet())
-            .when(responseObserver).onCompleted();
-        doAnswer(o -> errorCounter.incrementAndGet())
-            .when(responseObserver).onError(any(Throwable.class));
         OneToManyMethodHandler<String, String> handler = new OneToManyMethodHandler<>(requestMono ->
             requestMono.flatMapMany(r -> Flux.fromArray(r.split(","))));
         CompletableFuture<?> future = handler.invoke(new Object[]{request, responseObserver});
@@ -62,16 +68,6 @@ public final class OneToManyMethodHandlerTest {
     @Test
     void testError() {
         String request = "1,2,3,4,5,6,7";
-        AtomicInteger nextCounter = new AtomicInteger();
-        AtomicInteger completeCounter = new AtomicInteger();
-        AtomicInteger errorCounter = new AtomicInteger();
-        ServerCallToObserverAdapter<String> responseObserver = Mockito.mock(ServerCallToObserverAdapter.class);
-        doAnswer(o -> nextCounter.incrementAndGet())
-            .when(responseObserver).onNext(anyString());
-        doAnswer(o -> completeCounter.incrementAndGet())
-            .when(responseObserver).onCompleted();
-        doAnswer(o -> errorCounter.incrementAndGet())
-            .when(responseObserver).onError(any(Throwable.class));
         OneToManyMethodHandler<String, String> handler = new OneToManyMethodHandler<>(requestMono ->
             Flux.create(emitter -> {
                 for (int i = 0; i < 10; i++) {
