@@ -17,52 +17,41 @@
 
 package org.apache.dubbo.reactive;
 
-import org.apache.dubbo.common.stream.StreamObserver;
 import org.apache.dubbo.reactive.handler.OneToManyMethodHandler;
 import org.apache.dubbo.rpc.protocol.tri.observer.ServerCallToObserverAdapter;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import reactor.core.publisher.Flux;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doAnswer;
 
 /**
  * Unit test for OneToManyMethodHandler
  */
 public final class OneToManyMethodHandlerTest {
 
+    private CreatObserverAdapter creator;
 
-    private ServerCallToObserverAdapter<String> responseObserver;
-    private AtomicInteger nextCounter;
-    private AtomicInteger completeCounter;
-    private AtomicInteger errorCounter;
     @BeforeEach
-    void init(){
-        creatObserverAdapter creator=new creatObserverAdapter();
-        responseObserver=creator.getResponseObserver();
-        nextCounter = creator.getNextCounter();
-        completeCounter = creator.getCompleteCounter();
-        errorCounter = creator.getErrorCounter();
+    void init() {
+        creator = new CreatObserverAdapter();
     }
+
     @Test
     void testInvoke() {
         String request = "1,2,3,4,5,6,7";
         OneToManyMethodHandler<String, String> handler = new OneToManyMethodHandler<>(requestMono ->
             requestMono.flatMapMany(r -> Flux.fromArray(r.split(","))));
-        CompletableFuture<?> future = handler.invoke(new Object[]{request, responseObserver});
+        CompletableFuture<?> future = handler.invoke(new Object[]{request, creator.getResponseObserver()});
         Assertions.assertTrue(future.isDone());
-        Assertions.assertEquals(7, nextCounter.get());
-        Assertions.assertEquals(0, errorCounter.get());
-        Assertions.assertEquals(1, completeCounter.get());
+        Assertions.assertEquals(7, creator.getNextCounter().get());
+        Assertions.assertEquals(0, creator.getErrorCounter().get());
+        Assertions.assertEquals(1, creator.getCompleteCounter().get());
     }
 
     @Test
@@ -78,10 +67,10 @@ public final class OneToManyMethodHandlerTest {
                     }
                 }
             }));
-        CompletableFuture<?> future = handler.invoke(new Object[]{request, responseObserver});
+        CompletableFuture<?> future = handler.invoke(new Object[]{request, creator.getResponseObserver()});
         Assertions.assertTrue(future.isDone());
-        Assertions.assertEquals(6, nextCounter.get());
-        Assertions.assertEquals(1, errorCounter.get());
-        Assertions.assertEquals(0, completeCounter.get());
+        Assertions.assertEquals(6, creator.getNextCounter().get());
+        Assertions.assertEquals(1, creator.getErrorCounter().get());
+        Assertions.assertEquals(0, creator.getCompleteCounter().get());
     }
 }

@@ -24,15 +24,12 @@ import org.apache.dubbo.rpc.protocol.tri.observer.ServerCallToObserverAdapter;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doAnswer;
 
 /**
  * Unit test for ManyToOneMethodHandler
@@ -40,17 +37,12 @@ import static org.mockito.Mockito.doAnswer;
 public final class ManyToOneMethodHandlerTest {
 
     private StreamObserver<String> requestObserver;
-    private AtomicInteger nextCounter;
-    private AtomicInteger completeCounter;
-    private AtomicInteger errorCounter;
+    private CreatObserverAdapter creator;
+
     @BeforeEach
     void init() throws ExecutionException, InterruptedException {
-        creatObserverAdapter creator=new creatObserverAdapter();
-        ServerCallToObserverAdapter<String> responseObserver=creator.getResponseObserver();
-        nextCounter = creator.getNextCounter();
-        completeCounter = creator.getCompleteCounter();
-        errorCounter = creator.getErrorCounter();
-
+        creator = new CreatObserverAdapter();
+        ServerCallToObserverAdapter<String> responseObserver = creator.getResponseObserver();
         ManyToOneMethodHandler<String, String> handler = new ManyToOneMethodHandler<>(requestFlux ->
             requestFlux.map(Integer::valueOf).reduce(Integer::sum).map(String::valueOf));
         CompletableFuture<StreamObserver<String>> future = handler.invoke(new Object[]{responseObserver});
@@ -58,18 +50,18 @@ public final class ManyToOneMethodHandlerTest {
     }
 
     @Test
-    void testInvoker(){
+    void testInvoker() {
         for (int i = 0; i < 10; i++) {
             requestObserver.onNext(String.valueOf(i));
         }
         requestObserver.onCompleted();
-        Assertions.assertEquals(1, nextCounter.get());
-        Assertions.assertEquals(0, errorCounter.get());
-        Assertions.assertEquals(1, completeCounter.get());
+        Assertions.assertEquals(1, creator.getNextCounter().get());
+        Assertions.assertEquals(0, creator.getErrorCounter().get());
+        Assertions.assertEquals(1, creator.getCompleteCounter().get());
     }
 
     @Test
-    void testError(){
+    void testError() {
         for (int i = 0; i < 10; i++) {
             if (i == 6) {
                 requestObserver.onError(new Throwable());
@@ -77,8 +69,8 @@ public final class ManyToOneMethodHandlerTest {
             requestObserver.onNext(String.valueOf(i));
         }
         requestObserver.onCompleted();
-        Assertions.assertEquals(0, nextCounter.get());
-        Assertions.assertEquals(1, errorCounter.get());
-        Assertions.assertEquals(0, completeCounter.get());
+        Assertions.assertEquals(0, creator.getNextCounter().get());
+        Assertions.assertEquals(1, creator.getErrorCounter().get());
+        Assertions.assertEquals(0, creator.getCompleteCounter().get());
     }
 }

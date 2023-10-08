@@ -19,20 +19,12 @@ package org.apache.dubbo.reactive;
 
 import org.apache.dubbo.common.stream.StreamObserver;
 import org.apache.dubbo.reactive.handler.ManyToManyMethodHandler;
-import org.apache.dubbo.rpc.protocol.tri.observer.ServerCallToObserverAdapter;
 
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doAnswer;
 
 /**
  * Unit test for ManyToManyMethodHandler
@@ -40,25 +32,18 @@ import static org.mockito.Mockito.doAnswer;
 public final class ManyToManyMethodHandlerTest {
     @Test
     void testInvoke() throws ExecutionException, InterruptedException {
-
-        creatObserverAdapter creator=new creatObserverAdapter();
-
-        ServerCallToObserverAdapter<String> responseObserver=creator.getResponseObserver();
-
-        AtomicInteger nextCounter = creator.getNextCounter();
-        AtomicInteger completeCounter = creator.getCompleteCounter();
-        AtomicInteger errorCounter = creator.getErrorCounter();
+        CreatObserverAdapter creator = new CreatObserverAdapter();
 
         ManyToManyMethodHandler<String, String> handler = new ManyToManyMethodHandler<>(requestFlux ->
             requestFlux.map(r -> r + "0"));
-        CompletableFuture<StreamObserver<String>> future = handler.invoke(new Object[]{responseObserver});
+        CompletableFuture<StreamObserver<String>> future = handler.invoke(new Object[]{creator.getResponseObserver()});
         StreamObserver<String> requestObserver = future.get();
         for (int i = 0; i < 10; i++) {
             requestObserver.onNext(String.valueOf(i));
         }
         requestObserver.onCompleted();
-        Assertions.assertEquals(10, nextCounter.get());
-        Assertions.assertEquals(0, errorCounter.get());
-        Assertions.assertEquals(1, completeCounter.get());
+        Assertions.assertEquals(10, creator.getNextCounter().get());
+        Assertions.assertEquals(0, creator.getErrorCounter().get());
+        Assertions.assertEquals(1, creator.getCompleteCounter().get());
     }
 }
