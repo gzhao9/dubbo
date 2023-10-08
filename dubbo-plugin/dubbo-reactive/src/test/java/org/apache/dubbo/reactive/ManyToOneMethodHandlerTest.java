@@ -42,10 +42,9 @@ public final class ManyToOneMethodHandlerTest {
     @BeforeEach
     void init() throws ExecutionException, InterruptedException {
         creator = new CreatObserverAdapter();
-        ServerCallToObserverAdapter<String> responseObserver = creator.getResponseObserver();
         ManyToOneMethodHandler<String, String> handler = new ManyToOneMethodHandler<>(requestFlux ->
             requestFlux.map(Integer::valueOf).reduce(Integer::sum).map(String::valueOf));
-        CompletableFuture<StreamObserver<String>> future = handler.invoke(new Object[]{responseObserver});
+        CompletableFuture<StreamObserver<String>> future = handler.invoke(new Object[]{creator.getResponseObserver()});
         requestObserver = future.get();
     }
 
